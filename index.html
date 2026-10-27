@@ -50,6 +50,18 @@ th{background:#f8fafc;color:var(--muted);font-weight:600;font-size:.8rem}
 .msg.ok{display:block;background:var(--green-bg);color:var(--green)}
 .msg.err{display:block;background:var(--red-bg);color:var(--red)}
 .muted{color:var(--muted);font-size:.85rem}
+.dept-wrap{position:relative}
+.dept-btn{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:1rem;padding:4px 8px}
+.cal-wrap{overflow-x:auto;margin-top:14px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(116px,1fr));gap:4px;min-width:840px}
+.cal-dow{text-align:center;font-size:.78rem;color:var(--muted);font-weight:600;padding:4px 0}
+.cal-cell{background:#f8fafc;border:1px solid var(--border);border-radius:8px;min-height:88px;padding:6px;cursor:pointer;font-size:.82rem}
+.cal-cell:hover{border-color:var(--primary)}
+.cal-cell.today{border:2px solid var(--primary);background:#eff6ff}
+.cal-cell.other{background:transparent;border:1px dashed var(--border);cursor:default;min-height:0}
+.cal-cell .dnum{font-weight:700;margin-bottom:4px}
+.cal-chip{border-radius:5px;padding:2px 5px;margin-bottom:3px;font-size:.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-chip.cont{opacity:.7}
 </style>
 </head>
 <body>
@@ -62,7 +74,8 @@ th{background:#f8fafc;color:var(--muted);font-weight:600;font-size:.8rem}
 <nav>
   <button class="active" data-tab="availability">ดูรถว่าง</button>
   <button data-tab="book">จองรถ</button>
-  <button data-tab="list">รายการจอง</button>
+ <button data-tab="list">รายการจอง</button>
+  <button data-tab="calendar">ปฏิทิน</button>
   <button data-tab="report">รายงานสรุป</button>
 </nav>
 
@@ -100,10 +113,19 @@ th{background:#f8fafc;color:var(--muted);font-weight:600;font-size:.8rem}
       <div class="row">
         <div><label>เลือกรถ</label><select id="b-car" required></select></div>
         <div><label>ชื่อผู้จอง</label><input id="b-name" required placeholder="ชื่อ-นามสกุล"></div>
-        <div><label>แผนก</label><input id="b-dept" placeholder="เช่น ฝ่ายขาย"></div>
+        <div>
+  		<label>แผนก (เลือก หรือพิมพ์เพิ่มได้)</label>
+  		<div class="dept-wrap">
+    		<input id="b-dept" list="dept-list" placeholder="เลือก หรือพิมพ์ชื่อแผนก" autocomplete="off" style="padding-right:34px">
+    		<button type="button" class="dept-btn" onclick="openDeptPicker()" aria-label="เปิดรายการแผนก">▾</button>
+    		<datalist id="dept-list"></datalist>
+  		</div>
+	</div>
       </div>
       <label>ปลายทาง</label>
       <input id="b-dest" placeholder="เช่น ไปพบลูกค้าที่ลาดพร้าว">
+      <label>อีเมลผู้จอง (รับอีเมลยืนยันการจอง / แจ้งเตือนเมื่อถูกยกเลิก)</label>
+      <input type="email" id="b-email" placeholder="name@company.com">
       <div class="row">
         <div><label>เวลาเริ่มต้น</label><input type="datetime-local" id="b-start" required></div>
         <div><label>เวลาสิ้นสุด</label><input type="datetime-local" id="b-end" required></div>
@@ -127,6 +149,33 @@ th{background:#f8fafc;color:var(--muted);font-weight:600;font-size:.8rem}
     <div class="table-wrap">
       <table id="list-table">
         <thead><tr><th>รถ</th><th>ผู้จอง / แผนก</th><th>ปลายทาง / วัตถุประสงค์</th><th>ช่วงเวลา</th><th>สถานะ</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<!-- ปฏิทินการจอง -->
+<section id="tab-calendar" style="display:none">
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <h2 style="margin:0" id="cal-title"></h2>
+      <div style="display:flex;gap:6px">
+        <button class="btn-gray" style="margin:0" onclick="calMove(-1)">« เดือนก่อน</button>
+        <button class="btn-gray" style="margin:0" onclick="calToday()">เดือนนี้</button>
+        <button class="btn-gray" style="margin:0" onclick="calMove(1)">เดือนถัดไป »</button>
+      </div>
+    </div>
+    <div class="cal-wrap">
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+    <p class="muted" style="margin-top:10px">คลิกที่วันที่เพื่อดูรายละเอียดการจองของวันนั้น · แสดงเฉพาะรายการที่ยังไม่ยกเลิก</p>
+  </div>
+
+  <div class="card" id="cal-detail-card" style="display:none">
+    <h2 id="cal-detail-title"></h2>
+    <div class="table-wrap">
+      <table id="cal-detail-table">
+        <thead><tr><th>ช่วงเวลา</th><th>รถ</th><th>ผู้จอง / แผนก</th><th>ปลายทาง</th><th>สถานะ</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -159,6 +208,105 @@ th{background:#f8fafc;color:var(--muted);font-weight:600;font-size:.8rem}
 </main>
 
 <script>
+// ---- ปฏิทินการจอง ----
+const CAR_COLORS = ['#2563eb','#d97706','#16a34a','#9333ea','#dc2626','#0891b2','#65a30d','#db2777'];
+const TH_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                   'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const TH_DOW = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
+let calDate = new Date();
+let calData = {};   // 'YYYY-MM-DD' → [{b, first, last}]
+
+const dayKey = d => d.getFullYear() + '-' +
+  String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const fmtTime = iso => new Date(iso).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+async function loadCalendar() {
+  const y = calDate.getFullYear(), m = calDate.getMonth();
+  const from = new Date(y, m, 1).toISOString();
+  const to = new Date(y, m + 1, 1).toISOString();
+  const { bookings } = await api('/api/bookings?from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to));
+
+  calData = {};
+  for (const b of bookings) {
+    const s = new Date(b.start_time), e = new Date(b.end_time);
+    let d = new Date(Math.max(s.getTime(), new Date(y, m, 1).getTime()));
+    d = new Date(d.getFullYear(), d.getMonth(), d.getDate());           // เที่ยงคืน local
+    const stop = new Date(Math.min(e.getTime(), new Date(y, m + 1, 0, 23, 59, 59, 999).getTime()));
+    let guard = 0;
+    while (d <= stop && guard++ < 62) {                                  // กระจายการจองหลายวันให้ครบทุกวัน
+      const k = dayKey(d);
+      (calData[k] = calData[k] || []).push({ b, first: k === dayKey(s), last: k === dayKey(e) });
+      d.setDate(d.getDate() + 1);
+    }
+  }
+  for (const k in calData)
+    calData[k].sort((a, b) => new Date(a.b.start_time) - new Date(b.b.start_time));
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const y = calDate.getFullYear(), m = calDate.getMonth();
+  $('cal-title').textContent = TH_MONTHS[m] + ' ' + (y + 543);
+
+  let html = TH_DOW.map(d => '<div class="cal-dow">' + d + '</div>').join('');
+  const firstDow = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const todayK = dayKey(new Date());
+
+  for (let i = 0; i < firstDow; i++) html += '<div class="cal-cell other"></div>';
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const k = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+    const items = calData[k] || [];
+    const chips = items.slice(0, 3).map(it => {
+      const col = CAR_COLORS[it.b.car_id % CAR_COLORS.length];
+      const t = it.first && it.last ? fmtTime(it.b.start_time) + '-' + fmtTime(it.b.end_time)
+              : it.first ? fmtTime(it.b.start_time) + ' →'
+              : it.last  ? '→ ' + fmtTime(it.b.end_time)
+              : 'ทั้งวัน';
+      const cls = it.first && it.last ? '' : ' cont';
+      return '<div class="cal-chip' + cls + '" style="background:' + col + '22;color:' + col + '">' +
+             esc(t + ' · ' + it.b.plate) + '</div>';
+    }).join('');
+    const more = items.length > 3
+      ? '<div class="muted" style="font-size:.7rem">+ อีก ' + (items.length - 3) + ' รายการ</div>' : '';
+    html += '<div class="cal-cell' + (k === todayK ? ' today' : '') + '" onclick="showDay(\'' + k + '\')">' +
+            '<div class="dnum">' + day + '</div>' + chips + more + '</div>';
+  }
+
+  const pad = (7 - ((firstDow + daysInMonth) % 7)) % 7;
+  for (let i = 0; i < pad; i++) html += '<div class="cal-cell other"></div>';
+  $('cal-grid').innerHTML = html;
+}
+
+function calMove(delta) {
+  calDate = new Date(calDate.getFullYear(), calDate.getMonth() + delta, 1);
+  loadCalendar();
+}
+function calToday() { calDate = new Date(); loadCalendar(); }
+
+function showDay(k) {
+  const items = calData[k] || [];
+  const [yy, mm, dd] = k.split('-').map(Number);
+  $('cal-detail-title').textContent = 'รายการจองวันที่ ' + dd + ' ' + TH_MONTHS[mm - 1] + ' ' + (yy + 543);
+  const now = new Date();
+  $('cal-detail-table').querySelector('tbody').innerHTML = items.map(it => {
+    const b = it.b;
+    const st = new Date(b.start_time) > now ? '<span class="badge amber">จองล่วงหน้า</span>'
+             : new Date(b.end_time) >= now ? '<span class="badge green">กำลังใช้งาน</span>'
+             : '<span class="badge gray">เสร็จสิ้น</span>';
+    return '<tr>' +
+      '<td>' + fmtDT(b.start_time) + '<br>ถึง ' + fmtDT(b.end_time) + '</td>' +
+      '<td><b>' + esc(b.plate) + '</b><br><span class="muted">' + esc(b.car_name) + '</span></td>' +
+      '<td>' + esc(b.borrower_name) + '<br><span class="muted">' + esc(b.department || '-') + '</span></td>' +
+      '<td>' + esc(b.destination || '-') + '</td>' +
+      '<td>' + st + '</td></tr>';
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted)">ไม่มีการจองในวันนี้</td></tr>';
+  $('cal-detail-card').style.display = '';
+  $('cal-detail-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -178,6 +326,7 @@ function showTab(name) {
   document.querySelectorAll('main section').forEach(s => s.style.display = s.id === 'tab-' + name ? '' : 'none');
   if (name === 'book')    loadCarOptions();
   if (name === 'list')    loadBookings();
+  if (name === 'calendar') loadCalendar();
   if (name === 'report')  loadReport();
 }
 document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
@@ -261,9 +410,12 @@ async function submitBooking(ev) {
         purpose: $('b-purpose').value,
         start_time: new Date($('b-start').value).toISOString(),
         end_time: new Date($('b-end').value).toISOString(),
+	borrower_email: $('b-email').value.trim(),
       }),
     });
     showMsg('b-msg', 'จองรถสำเร็จแล้ว', true);
+        loadDepartments();
+
     $('book-form').reset();
     setTimeout(() => { $('b-msg').className = 'msg'; showTab('list'); }, 1200);
   } catch (e) { showMsg('b-msg', e.message, false); }
@@ -332,6 +484,36 @@ async function loadReport() {
 // ---- เริ่มต้น ----
 defaultRange();
 showTab('availability');
+checkAdmin();
+loadDepartments();
+
+// ---- แผนก (dropdown + พิมพ์เพิ่มได้) ----
+// รายชื่อแผนกเริ่มต้น — แก้ไข/เพิ่ม/ลบได้ที่นี่
+const PRESET_DEPARTMENTS = [
+  'ฝ่ายขาย', 'ฝ่ายการตลาด', 'ฝ่ายจัดซื้อ', 'ฝ่ายบัญชี', 'ฝ่ายบุคคล',
+  'ฝ่ายไอที', 'ฝ่ายผลิต', 'ฝ่ายคลังสินค้า', 'ฝ่ายวิศวกรรม', 'สำนักผู้จัดการ',
+];
+
+function openDeptPicker() {
+  const el = $('b-dept');
+  el.focus();
+  if (el.showPicker) { try { el.showPicker(); } catch {} }
+}
+
+async function loadDepartments() {
+  const used = new Set(PRESET_DEPARTMENTS);
+  try {
+    // ดึงแผนกที่เคยใช้จากประวัติการจอง — แผนกใหม่ที่พิมพ์เข้าไปจะจำไว้ในลิสต์อัตโนมัติ
+    const { bookings } = await api('/api/bookings?status=all');
+    for (const b of bookings) {
+      const d = (b.department || '').trim();
+      if (d) used.add(d);
+    }
+  } catch {}
+  $('dept-list').innerHTML = [...used]
+    .sort((a, b) => a.localeCompare(b, 'th'))
+    .map(d => '<option value="' + esc(d) + '">').join('');
+}
 </script>
 </body>
 </html>

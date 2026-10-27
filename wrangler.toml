@@ -1,0 +1,16 @@
+name = "car-booking"
+main = "src/worker.js"
+compatibility_date = "2025-01-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "car-booking-db"
+database_id = "8fd7b96a-3272-4ea9-bd8a-53d87865494a"
+
+[vars]
+EMAIL_FROM = "ระบบจองรถบริษัท <teerawat@transpologistics.com>"
+NOTIFY_EMAIL = "teerawat@transpologistics.com"
