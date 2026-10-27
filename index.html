@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ระบบจองรถบริษัท</title>
+<style>
+:root{--primary:#2563eb;--primary-d:#1e40af;--green:#16a34a;--green-bg:#dcfce7;
+--red:#dc2626;--red-bg:#fee2e2;--amber:#d97706;--amber-bg:#fef3c7;
+--bg:#f1f5f9;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#e2e8f0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Tahoma,'Noto Sans Thai',sans-serif;background:var(--bg);color:var(--text)}
+header{background:linear-gradient(135deg,var(--primary),var(--primary-d));color:#fff;padding:20px 24px}
+header h1{font-size:1.35rem} header p{opacity:.85;font-size:.85rem;margin-top:4px}
+nav{display:flex;gap:8px;background:var(--card);padding:10px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+nav button{border:none;background:#e2e8f0;padding:9px 16px;border-radius:8px;cursor:pointer;font-size:.95rem;font-family:inherit}
+nav button.active{background:var(--primary);color:#fff}
+main{max-width:1000px;margin:0 auto;padding:20px 16px 60px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px}
+h2{font-size:1.05rem;margin-bottom:12px}
+label{display:block;font-size:.85rem;color:var(--muted);margin:10px 0 4px}
+input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-size:.95rem;font-family:inherit}
+textarea{resize:vertical;min-height:60px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.btn{background:var(--primary);color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:.95rem;font-family:inherit;margin-top:12px}
+.btn:hover{background:var(--primary-d)}
+.btn-outline{background:#fff;color:var(--red);border:1px solid var(--red);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:.8rem;font-family:inherit}
+.btn-sm{background:var(--primary);color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:.8rem;font-family:inherit;margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{padding:9px 10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:#f8fafc;color:var(--muted);font-weight:600;font-size:.8rem}
+.table-wrap{overflow-x:auto}
+.badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:.75rem;font-weight:600}
+.badge.green{background:var(--green-bg);color:var(--green)}
+.badge.red{background:var(--red-bg);color:var(--red)}
+.badge.amber{background:var(--amber-bg);color:var(--amber)}
+.badge.gray{background:#e2e8f0;color:var(--muted)}
+.car-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-top:16px}
+.car{border:1px solid var(--border);border-radius:10px;padding:14px}
+.car.available{border-color:var(--green);background:#f0fdf4}
+.car.booked{border-color:var(--red);background:#fef2f2}
+.car .plate{font-weight:700;font-size:1.05rem}
+.car .meta{color:var(--muted);font-size:.82rem;margin-top:2px}
+.car .status{margin-top:8px;font-size:.82rem}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center}
+.stat .num{font-size:1.6rem;font-weight:700;color:var(--primary)}
+.stat .lbl{font-size:.8rem;color:var(--muted);margin-top:2px}
+.msg{padding:10px 14px;border-radius:8px;margin-top:10px;font-size:.9rem;display:none}
+.msg.ok{display:block;background:var(--green-bg);color:var(--green)}
+.msg.err{display:block;background:var(--red-bg);color:var(--red)}
+.muted{color:var(--muted);font-size:.85rem}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ระบบจองรถบริษัท</h1>
+  <p>สำหรับพนักงานขอใช้รถภายในองค์กร</p>
+</header>
+
+<nav>
+  <button class="active" data-tab="availability">ดูรถว่าง</button>
+  <button data-tab="book">จองรถ</button>
+  <button data-tab="list">รายการจอง</button>
+  <button data-tab="report">รายงานสรุป</button>
+</nav>
+
+<main>
+
+<!-- ดูรถว่าง -->
+<section id="tab-availability">
+  <div class="card">
+    <h2>ตรวจสอบรถว่าง</h2>
+    <div class="row">
+      <div><label>เริ่มต้น</label><input type="datetime-local" id="av-start"></div>
+      <div><label>สิ้นสุด</label><input type="datetime-local" id="av-end"></div>
+      <div><label>&nbsp;</label><button class="btn" style="margin-top:0;width:100%" onclick="checkAvailability()">ตรวจสอบ</button></div>
+    </div>
+    <div id="av-result" class="car-grid"></div>
+    <p class="muted" id="av-hint" style="margin-top:12px">เลือกช่วงวันที่-เวลา แล้วกด "ตรวจสอบ" เพื่อดูว่ารถคันไหนว่าง</p>
+  </div>
+  <div class="card">
+    <h2>เพิ่มรถเข้าระบบ</h2>
+    <div class="row">
+      <div><label>ทะเบียนรถ</label><input id="c-plate" placeholder="เช่น 1กก 1234"></div>
+      <div><label>รุ่น / ชื่อรถ</label><input id="c-name" placeholder="เช่น Toyota Camry"></div>
+      <div><label>จำนวนที่นั่ง</label><input id="c-seats" type="number" value="4" min="1"></div>
+    </div>
+    <button class="btn" onclick="addCar()">เพิ่มรถ</button>
+    <div id="c-msg" class="msg"></div>
+  </div>
+</section>
+
+<!-- จองรถ -->
+<section id="tab-book" style="display:none">
+  <div class="card">
+    <h2>จองรถ</h2>
+    <form id="book-form" onsubmit="submitBooking(event)">
+      <div class="row">
+        <div><label>เลือกรถ</label><select id="b-car" required></select></div>
+        <div><label>ชื่อผู้จอง</label><input id="b-name" required placeholder="ชื่อ-นามสกุล"></div>
+        <div><label>แผนก</label><input id="b-dept" placeholder="เช่น ฝ่ายขาย"></div>
+      </div>
+      <label>ปลายทาง</label>
+      <input id="b-dest" placeholder="เช่น ไปพบลูกค้าที่ลาดพร้าว">
+      <div class="row">
+        <div><label>เวลาเริ่มต้น</label><input type="datetime-local" id="b-start" required></div>
+        <div><label>เวลาสิ้นสุด</label><input type="datetime-local" id="b-end" required></div>
+      </div>
+      <label>วัตถุประสงค์</label>
+      <textarea id="b-purpose" placeholder="รายละเอียดการใช้งานรถ"></textarea>
+      <button class="btn" type="submit">ยืนยันการจอง</button>
+    </form>
+    <div id="b-msg" class="msg"></div>
+  </div>
+</section>
+
+<!-- รายการจอง -->
+<section id="tab-list" style="display:none">
+  <div class="card">
+    <h2>รายการจอง</h2>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <input type="checkbox" id="show-cancelled" style="width:auto" onchange="loadBookings()">
+      <span style="color:var(--text)">รวมรายการที่ยกเลิกแล้ว</span>
+    </label>
+    <div class="table-wrap">
+      <table id="list-table">
+        <thead><tr><th>รถ</th><th>ผู้จอง / แผนก</th><th>ปลายทาง / วัตถุประสงค์</th><th>ช่วงเวลา</th><th>สถานะ</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- รายงานสรุป -->
+<section id="tab-report" style="display:none">
+  <div class="stats" id="r-stats"></div>
+  <div class="card">
+    <h2>สรุปการใช้งานแยกตามรถ</h2>
+    <div class="table-wrap">
+      <table id="r-car">
+        <thead><tr><th>ทะเบียน</th><th>รุ่น</th><th>จำนวนครั้งที่จอง</th><th>ชั่วโมงใช้งานรวม</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <h2>ผู้ใช้รถบ่อยสุด 10 อันดับ</h2>
+    <div class="table-wrap">
+      <table id="r-person">
+        <thead><tr><th>#</th><th>ผู้จอง</th><th>แผนก</th><th>จำนวนครั้ง</th><th>ชั่วโมงรวม</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function api(path, opts) {
+  const res = await fetch(path, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+  return data;
+}
+const fmtDT = iso => new Date(iso).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
+function showMsg(id, text, ok) { const el = $(id); el.textContent = text; el.className = 'msg ' + (ok ? 'ok' : 'err'); }
+
+// ---- แท็บ ----
+function showTab(name) {
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('main section').forEach(s => s.style.display = s.id === 'tab-' + name ? '' : 'none');
+  if (name === 'book')    loadCarOptions();
+  if (name === 'list')    loadBookings();
+  if (name === 'report')  loadReport();
+}
+document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+
+// ---- ดูรถว่าง ----
+function localDay(d) {
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+function defaultRange() {
+  const day = localDay(new Date());
+  $('av-start').value = day + 'T08:00';
+  $('av-end').value   = day + 'T18:00';
+}
+
+async function checkAvailability() {
+  const sv = $('av-start').value, ev = $('av-end').value;
+  if (!sv || !ev) return alert('กรุณาเลือกช่วงเวลาเริ่มต้นและสิ้นสุด');
+  if (new Date(sv) >= new Date(ev)) return alert('เวลาสิ้นสุดต้องหลังจากเวลาเริ่มต้น');
+  try {
+    const q = 'start=' + encodeURIComponent(new Date(sv).toISOString()) +
+              '&end='  + encodeURIComponent(new Date(ev).toISOString());
+    const { cars } = await api('/api/cars?' + q);
+    $('av-result').innerHTML = cars.map(c => {
+      const badge = c.available
+        ? '<span class="badge green">ว่าง</span>'
+        : '<span class="badge red">ถูกจองโดย ' + esc(c.booked_by) + '</span>';
+      const btn = c.available
+        ? '<button class="btn-sm" onclick="bookNow(' + c.id + ', \'' + sv + '\', \'' + ev + '\')">จองคันนี้</button>' : '';
+      return '<div class="car ' + (c.available ? 'available' : 'booked') + '">' +
+        '<div class="plate">' + esc(c.plate) + '</div>' +
+        '<div class="meta">' + esc(c.name) + ' · ' + c.seats + ' ที่นั่ง</div>' +
+        '<div class="status">' + badge + '</div>' + btn + '</div>';
+    }).join('');
+    $('av-hint').textContent = 'พบรถว่าง ' + cars.filter(c => c.available).length + ' จาก ' + cars.length + ' คัน';
+  } catch (e) { alert(e.message); }
+}
+
+async function bookNow(carId, start, end) {
+  showTab('book');
+  $('b-start').value = start;
+  $('b-end').value = end;
+  await loadCarOptions();
+  $('b-car').value = carId;
+  $('b-msg').className = 'msg';
+}
+
+// ---- เพิ่มรถ ----
+async function addCar() {
+  try {
+    await api('/api/cars', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        plate: $('c-plate').value, name: $('c-name').value,
+        seats: Number($('c-seats').value) || 4,
+      }),
+    });
+    showMsg('c-msg', 'เพิ่มรถเรียบร้อยแล้ว', true);
+    $('c-plate').value = ''; $('c-name').value = '';
+  } catch (e) { showMsg('c-msg', e.message, false); }
+}
+
+// ---- จองรถ ----
+async function loadCarOptions() {
+  const { cars } = await api('/api/cars');
+  $('b-car').innerHTML = cars.map(c =>
+    '<option value="' + c.id + '">' + esc(c.plate) + ' — ' + esc(c.name) + ' (' + c.seats + ' ที่นั่ง)</option>'
+  ).join('');
+}
+
+async function submitBooking(ev) {
+  ev.preventDefault();
+  try {
+    await api('/api/bookings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        car_id: Number($('b-car').value),
+        borrower_name: $('b-name').value,
+        department: $('b-dept').value,
+        destination: $('b-dest').value,
+        purpose: $('b-purpose').value,
+        start_time: new Date($('b-start').value).toISOString(),
+        end_time: new Date($('b-end').value).toISOString(),
+      }),
+    });
+    showMsg('b-msg', 'จองรถสำเร็จแล้ว', true);
+    $('book-form').reset();
+    setTimeout(() => { $('b-msg').className = 'msg'; showTab('list'); }, 1200);
+  } catch (e) { showMsg('b-msg', e.message, false); }
+}
+
+// ---- รายการจอง ----
+async function loadBookings() {
+  try {
+    const showAll = $('show-cancelled').checked ? '?status=all' : '';
+    const { bookings } = await api('/api/bookings' + showAll);
+    const now = new Date();
+    $('list-table').querySelector('tbody').innerHTML = bookings.map(b => {
+      let st, canCancel = false;
+      if (b.status === 'cancelled') {
+        st = '<span class="badge red">ยกเลิกแล้ว</span>';
+      } else if (new Date(b.start_time) > now) {
+        st = '<span class="badge amber">จองล่วงหน้า</span>'; canCancel = true;
+      } else if (new Date(b.end_time) >= now) {
+        st = '<span class="badge green">กำลังใช้งาน</span>'; canCancel = true;
+      } else {
+        st = '<span class="badge gray">เสร็จสิ้น</span>';
+      }
+      return '<tr>' +
+        '<td><b>' + esc(b.plate) + '</b><br><span class="muted">' + esc(b.car_name) + '</span></td>' +
+        '<td>' + esc(b.borrower_name) + '<br><span class="muted">' + esc(b.department || '-') + '</span></td>' +
+        '<td>' + esc(b.destination || '-') + (b.purpose ? '<br><span class="muted">' + esc(b.purpose) + '</span>' : '') + '</td>' +
+        '<td>' + fmtDT(b.start_time) + '<br>ถึง ' + fmtDT(b.end_time) + '</td>' +
+        '<td>' + st + '</td>' +
+        '<td>' + (canCancel ? '<button class="btn-outline" onclick="cancelBooking(' + b.id + ')">ยกเลิก</button>' : '') + '</td>' +
+      '</tr>';
+    }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted)">ยังไม่มีรายการจอง</td></tr>';
+  } catch (e) { alert(e.message); }
+}
+
+async function cancelBooking(id) {
+  if (!confirm('ยืนยันการยกเลิกการจองครั้งนี้?')) return;
+  try { await api('/api/bookings/' + id + '/cancel', { method: 'POST' }); loadBookings(); }
+  catch (e) { alert(e.message); }
+}
+
+// ---- รายงานสรุป ----
+async function loadReport() {
+  try {
+    const { totals, perCar, perPerson } = await api('/api/report');
+    const items = [
+      ['รถทั้งหมด', totals.total_cars ?? 0],
+      ['การจองทั้งหมด', totals.total_bookings ?? 0],
+      ['กำลังใช้งานตอนนี้', totals.in_use_now ?? 0],
+      ['จองล่วงหน้า', totals.upcoming_bookings ?? 0],
+      ['ยกเลิกแล้ว', totals.cancelled_bookings ?? 0],
+    ];
+    $('r-stats').innerHTML = items.map(([l, v]) =>
+      '<div class="stat"><div class="num">' + v + '</div><div class="lbl">' + l + '</div></div>').join('');
+
+    $('r-car').querySelector('tbody').innerHTML = perCar.map(c =>
+      '<tr><td><b>' + esc(c.plate) + '</b></td><td>' + esc(c.name) + '</td><td>' +
+      c.booking_count + '</td><td>' + c.total_hours + '</td></tr>').join('');
+
+    $('r-person').querySelector('tbody').innerHTML = perPerson.map((p, i) =>
+      '<tr><td>' + (i + 1) + '</td><td>' + esc(p.borrower_name) + '</td><td>' + esc(p.department || '-') +
+      '</td><td>' + p.booking_count + '</td><td>' + p.total_hours + '</td></tr>').join('')
+      || '<tr><td colspan="5" style="text-align:center;color:var(--muted)">ยังไม่มีข้อมูล</td></tr>';
+  } catch (e) { alert(e.message); }
+}
+
+// ---- เริ่มต้น ----
+defaultRange();
+showTab('availability');
+</script>
+</body>
+</html>
