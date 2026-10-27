@@ -1,9 +1,0 @@
-migrate-out/
-*.db
-*.db-wal
-*.db-shm
-.dev.vars
-node_modules/
-.wrangler/
-dist/
-backup.sql
